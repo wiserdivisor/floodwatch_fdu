@@ -1,111 +1,129 @@
-#include <WiFi.h>
-#include <PubSubClient.h>
-#include <Wire.h>
+#include<Wire.h>
+#inlclude<WiFi.h>
+#inlclude<PubSubClient.h>
+#include<DHTesp.h>
+#include<HCSR04.h>
+#include<LiquidCrystal_I2C.h>
 
-const char* ssid = "TP-Link_A41A";
-const char* password = "vigneshmr@99";
-const char* mqtt_server = "broker.hivemq.com";
+int dhtPin = 17;
+DHTesp dht;
+MQTTClient 
+int trigPin = 13;
+int echoPin = 12;
+UltraSonicDistanceSensor distanceSensor(trigPin, echoPin);
 
-WiFiClient espClient;
-PubSubClient client(espClient);
-long lastMsg = 0;
-char msg[50];
-int value = 0;
-//This is a test
-void setup() {
-  Serial.begin(115200);
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  client.setCallback(callback);
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-  pinMode(ledPin, OUTPUT);
-}
 
-void setup_wifi() {
-  delay(10);
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+byte left[8] =
+  {
+    0b10000,
+    0b10000,
+    0b10001,
+    0b10001,
+    0b10101,
+    0b10101,
+    0b10101,
+    0b10101
+  };
 
-  WiFi.begin(ssid, password);
+byte right[8] =
+  {
+    0b00001,
+    0b00001,
+    0b10001,
+    0b10001,
+    0b10101,
+    0b10101,
+    0b10101,
+    0b10101
+  };
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+byte mid_long[8] =
+  {
+    0b00100,
+    0b00100,
+    0b00100,
+    0b00100,
+    0b10101,
+    0b10101,
+    0b10101,
+    0b10101
+  };
+
+byte mid_short[8] =
+  {
+    0b00000,
+    0b00000,
+    0b00100,
+    0b00100,
+    0b10101,
+    0b10101,
+    0b10101,
+    0b10101
+  };
+
+void setup() 
+  {     
+    dht.setup(dhtPin, DHTesp::DHT11);
+    
+    lcd.init();
+    lcd.backlight();
+    
+    lcd.createChar(1, left);
+    lcd.createChar(2, mid_long);
+    lcd.createChar(3, right);
+    lcd.createChar(4, mid_short);
+    
+    lcd.clear();
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-}
+void loop() 
+  {
+    delay(2000);
+    
+    TempAndHumidity temphumid = dht.getTempAndHumidity();
+    lcd.setCursor(0,0);
+    lcd.print("Temp:"+String(temphumid.temperature,0));
+    lcd.print("  ");
+    lcd.print("Humidity:"+String(temphumid.humidity,0));
 
-void callback(char* topic, byte* message, unsigned int length) {
-  Serial.print("Message arrived on topic: ");
-  Serial.print(topic);
-  Serial.print(". Message: ");
-  String messageTemp;
+    double distance = distanceSensor.measureDistanceCm();
+    lcd.setCursor(13,2);
+    lcd.print("F-LEVEL");
+    lcd.setCursor(13,3);
+    lcd.print(distance);
+    lcd.print((distance<=9)?"CM ":"CM");
+    
+    lcd.setCursor(0,1);
+    for(int i=13; i>6; i=i-3)
+      {
+        if(distance-i<=0)
+          {            
+            lcd.print((i==7)?">>":">>>>");
+          }
+        else
+          {
+            lcd.print((i==7)?"  ":"    ");
+          }
+      }
 
-  for (int i = 0; i < length; i++) {
-    Serial.print((char)message[i]);
-    messageTemp += (char)message[i];
+    lcd.setCursor(0,2);
+    for(int i=0; i<4; i++)
+      {
+        lcd.print(i);
+        lcd.print((i==3)?" ":"  ");
+      }
+    
+    lcd.setCursor(0,3);
+    for(int i=0; i<2; i++)
+      {
+        lcd.write(byte(1));
+        lcd.write(byte(2));
+        lcd.write(byte(3));
+        lcd.write(byte(4));
+      }
+      lcd.write(byte(1));
+      lcd.write(byte(2));
+      lcd.write(byte(3));    
   }
-  Serial.println();
-
-  // Feel free to add more if statements to control more GPIOs with MQTT
-
-  // If a message is received on the topic esp32/output, you check if the message is either "on" or "off".
-  // Changes the output state according to the message
-  if (String(topic) == "floodwatch/fdu/FDU-62MFf1") {
-    Serial.print("Changing output to ");
-    if(messageTemp == "on"){
-      Serial.println("on");
-      digitalWrite(ledPin, HIGH);
-    }
-    else if(messageTemp == "off"){
-      Serial.println("off");
-      digitalWrite(ledPin, LOW);
-    }
-  }
-}
-
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect("ESP8266Client")) {
-      Serial.println("connected");
-      // Subscribe
-      client.subscribe("floodwatch/fdu/FDU-62MFf1");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-}
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-
-  long now = millis();
-  if (now - lastMsg > 5000) {
-    lastMsg = now;
-
-    client.publish("floodwatch/fdu/FDU-62MFf1", "ALRT 2020-10-05T20:15:15.123456 19.000000,21.000000");
-
-    humidity = bme.readHumidity();
-
-    // Convert the value to a char array
-    char humString[8];
-    dtostrf(humidity, 1, 2, humString);
-    Serial.print("Humidity: ");
-    Serial.println(humString);
-    client.publish("esp32/humidity", humString);
-  }
-}
