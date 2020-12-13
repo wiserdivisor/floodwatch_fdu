@@ -10,9 +10,9 @@ const char* ssid = "TP-Link_A41A";
 const char* pswrd = "vigneshmr@99";
 const char* broker = "broker.hivemq.com";
 String message = "ALRT 19.073933,72.862785 ";
+Timezone timenow;
 
 WiFiClient wifi;
-
 PubSubClient client(wifi);
 bool lastmsg[3]={true, true, true};
 
@@ -78,10 +78,7 @@ byte mid_short[8] =
 void setup() 
   {
     WiFi.begin(ssid, pswrd);
-    
-    Timezone timenow;
-    timenow.setLocation(F("Asia/Kolkata"));
-    
+    timenow.setPosix("IST-5:30");
     client.setServer(broker, 1883);
     
     dht.setup(dhtPin, DHTesp::DHT11);
@@ -144,8 +141,9 @@ void loop()
             if (distance<13 && distance>10 && lastmsg[0])
               {
                 waitForSync();
-                message = message + dateTime(ISO8601);
-                const char* alert = message.c_str();
+                String rawtimestamp = timenow.dateTime(ISO8601);
+                String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
+                const char* alert = rawalert.c_str();
                 client.publish("floodwatch/fdu/62MFf1", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR1OK");
@@ -154,8 +152,9 @@ void loop()
             else if (distance<10 && distance>7 && lastmsg[1])
               {
                 waitForSync();
-                message = message + dateTime(ISO8601);
-                const char* alert = message.c_str();
+                String rawtimestamp = timenow.dateTime(ISO8601);
+                String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
+                const char* alert = rawalert.c_str();
                 client.publish("floodwatch/fdu/62MFf1", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR2OK");
@@ -164,14 +163,16 @@ void loop()
             else if (distance<7 && distance>4 && lastmsg[2])
               {
                 waitForSync();
-                message = message + dateTime(ISO8601);
-                const char* alert = message.c_str();
+                String rawtimestamp = timenow.dateTime(ISO8601);
+                String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
+                const char* alert = rawalert.c_str();
                 client.publish("floodwatch/fdu/62MFf1", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR3OK");
                 lastmsg[2] = false;
               }
           }
+          
         else
           {
             lcd.print((i==7)?"  ":"    ");
