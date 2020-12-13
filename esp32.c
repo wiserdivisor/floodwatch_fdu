@@ -1,13 +1,21 @@
 #include<Wire.h>
-#inlclude<WiFi.h>
-#inlclude<PubSubClient.h>
+#include<WiFi.h>
+#include<PubSubClient.h>
 #include<DHTesp.h>
 #include<HCSR04.h>
 #include<LiquidCrystal_I2C.h>
 
+const char* ssid = "TP-Link_A41A";
+const char* pswrd = "vigneshmr@99";
+const char* broker = "broker.hivemq.com";
+
+WiFiClient wifi;
+PubSubClient client(wifi);
+bool lastmsg[3]={true, true, true};
+
 int dhtPin = 17;
 DHTesp dht;
-MQTTClient 
+
 int trigPin = 13;
 int echoPin = 12;
 UltraSonicDistanceSensor distanceSensor(trigPin, echoPin);
@@ -63,8 +71,12 @@ byte mid_short[8] =
     0b10101
   };
 
+
 void setup() 
-  {     
+  {
+    WiFi.begin(ssid, pswrd);
+    client.setServer(broker, 1883);
+    
     dht.setup(dhtPin, DHTesp::DHT11);
     
     lcd.init();
@@ -78,8 +90,27 @@ void setup()
     lcd.clear();
   }
 
+void reconnect()
+  {
+    while (!client.connected())
+      {
+        if (client.connect("FDU-62MFf1", willTopic="floodwatch/fdu/62MFf1", willQos=2, willMessage="STOF")) 
+          { 
+            lcd.setCursor(14,1);
+            lcd.print("RES200");
+          }
+        else 
+          { 
+            lcd.setCursor(14,1);
+            lcd.print("ERR503");
+            delay(2000);
+          }
+      }
+  }
+
 void loop() 
   {
+    if(!client.connected()) { reconnect(); }
     delay(2000);
     
     TempAndHumidity temphumid = dht.getTempAndHumidity();
@@ -98,9 +129,25 @@ void loop()
     lcd.setCursor(0,1);
     for(int i=13; i>6; i=i-3)
       {
+        
         if(distance-i<=0)
           {            
             lcd.print((i==7)?">>":">>>>");
+            if (i<13 && i>10 && lastmsg[0])
+              {
+                client.publish("floodwatch/fdu/62MFf1","ALR1");
+                lastmsg[0] = false;
+              }
+            else if (i<10 && i>7 && lastmsg[1])
+              {
+                client.publish("floodwatch/fdu/62MFf1","ALR2");
+                lastmsg[1] = false;
+              }
+            else if (i<7 && i>4 && lastmsg[2])
+              {
+                client.publish("floodwatch/fdu/62MFf1","ALR3");
+                lastmsg[2] = false;
+              }
           }
         else
           {
