@@ -94,9 +94,10 @@ void reconnect()
   {
     while (!client.connected())
       {
-        if (client.connect("FDU-62MFf1", willTopic="floodwatch/fdu/62MFf1", willQos=2, willMessage="STOF")) 
+        if (client.connect("FDU-62MFf1", "floodwatch/fdu/62MFf1/OFF", 2, false,"STOF")) 
           { 
             lcd.setCursor(14,1);
+            client.publish("floodwatch/fdu/62MFf1/OFF","STON");
             lcd.print("RES200");
           }
         else 
@@ -133,19 +134,25 @@ void loop()
         if(distance-i<=0)
           {            
             lcd.print((i==7)?">>":">>>>");
-            if (i<13 && i>10 && lastmsg[0])
+            if (distance<13 && distance>10 && lastmsg[0])
               {
-                client.publish("floodwatch/fdu/62MFf1","ALR1");
+                client.publish("floodwatch/fdu/62MFf1","ALRT 2020-12-14T02:15:45 19.073933,72.862785");
+                lcd.setCursor(14,1);
+                lcd.print("ALR1OK");
                 lastmsg[0] = false;
               }
-            else if (i<10 && i>7 && lastmsg[1])
+            else if (distance<10 && distance>7 && lastmsg[1])
               {
-                client.publish("floodwatch/fdu/62MFf1","ALR2");
+                client.publish("floodwatch/fdu/62MFf1","ALRT 2020-12-14T02:20:45 19.073933,72.862785");
+                lcd.setCursor(14,1);
+                lcd.print("ALR2OK");
                 lastmsg[1] = false;
               }
-            else if (i<7 && i>4 && lastmsg[2])
+            else if (distance<7 && distance>4 && lastmsg[2])
               {
-                client.publish("floodwatch/fdu/62MFf1","ALR3");
+                client.publish("floodwatch/fdu/62MFf1","ALRT 2020-12-14T02:23:45 19.073933,72.862785");
+                lcd.setCursor(14,1);
+                lcd.print("ALR3OK");
                 lastmsg[2] = false;
               }
           }
