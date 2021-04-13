@@ -7,13 +7,14 @@
 #include<LiquidCrystal_I2C.h>
 
 const char* ssid = "TP-Link_A41A";
-const char* pswrd = "vigneshmr@99";
+const char* pswrd = "88598871";
 const char* broker = "broker.hivemq.com";
 String message = "ALRT 19.073933,72.862785 ";
-Timezone timenow;
 
+Timezone timenow;
 WiFiClient wifi;
 PubSubClient client(wifi);
+
 bool lastmsg[3]={true, true, true};
 
 int dhtPin = 17;
@@ -78,7 +79,7 @@ byte mid_short[8] =
 void setup() 
   {
     WiFi.begin(ssid, pswrd);
-    timenow.setPosix("IST-5:30");
+    //timenow.setPosix("IST-5:30");
     client.setServer(broker, 1883);
     
     dht.setup(dhtPin, DHTesp::DHT11);
@@ -98,10 +99,10 @@ void reconnect()
   {
     while (!client.connected())
       {
-        if (client.connect("FDU-62MFf1", "floodwatch/fdu/62MFf1/OFF", 2, false,"STOF")) 
+        if (client.connect("FDU-bfL389", "floodwatch/fdu/bfL389", 2, false,"STOF 19.073933,72.862785 ")) 
           { 
             lcd.setCursor(14,1);
-            client.publish("floodwatch/fdu/62MFf1/OFF","STON");
+            client.publish("floodwatch/fdu/bfL389","STON 19.073933,72.862785 ");
             lcd.print("RES200");
           }
         else 
@@ -116,6 +117,7 @@ void reconnect()
 void loop() 
   {
     if(!client.connected()) { reconnect(); }
+    client.loop();
     delay(2000);
     
     TempAndHumidity temphumid = dht.getTempAndHumidity();
@@ -144,7 +146,7 @@ void loop()
                 String rawtimestamp = timenow.dateTime(ISO8601);
                 String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
                 const char* alert = rawalert.c_str();
-                client.publish("floodwatch/fdu/62MFf1", alert);
+                client.publish("floodwatch/fdu/bfL389", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR1OK");
                 lastmsg[0] = false;
@@ -155,7 +157,7 @@ void loop()
                 String rawtimestamp = timenow.dateTime(ISO8601);
                 String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
                 const char* alert = rawalert.c_str();
-                client.publish("floodwatch/fdu/62MFf1", alert);
+                client.publish("floodwatch/fdu/bfL389", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR2OK");
                 lastmsg[1] = false;
@@ -166,7 +168,7 @@ void loop()
                 String rawtimestamp = timenow.dateTime(ISO8601);
                 String rawalert = message + rawtimestamp.substring(0, rawtimestamp.length()-5);
                 const char* alert = rawalert.c_str();
-                client.publish("floodwatch/fdu/62MFf1", alert);
+                client.publish("floodwatch/fdu/bfL389", alert);
                 lcd.setCursor(14,1);
                 lcd.print("ALR3OK");
                 lastmsg[2] = false;
